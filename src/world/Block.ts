@@ -23,6 +23,7 @@ export type BlockType = (typeof BlockType)[keyof typeof BlockType];
  * Aplicando OCP, puedes extender esto fácilmente para nuevos bloques.
  */
 export interface BlockDefinition {
+  isOpaque: any;
   id: BlockType;
   name: string;
   isSolid: boolean;
@@ -37,6 +38,7 @@ export const BlockDefinitions: Record<BlockType, BlockDefinition> = {
     name: "Air",
     isSolid: false,
     isTransparent: true,
+    isOpaque: false,
     color: 0x000000,
   },
   [BlockType.GRASS]: {
@@ -44,6 +46,7 @@ export const BlockDefinitions: Record<BlockType, BlockDefinition> = {
     name: "Grass",
     isSolid: true,
     isTransparent: false,
+    isOpaque: true,
     color: 0x00ff00,
   },
   [BlockType.DIRT]: {
@@ -51,6 +54,7 @@ export const BlockDefinitions: Record<BlockType, BlockDefinition> = {
     name: "Dirt",
     isSolid: true,
     isTransparent: false,
+    isOpaque: true,
     color: 0x8b4513,
   },
   [BlockType.STONE]: {
@@ -58,6 +62,7 @@ export const BlockDefinitions: Record<BlockType, BlockDefinition> = {
     name: "Stone",
     isSolid: true,
     isTransparent: false,
+    isOpaque: true,
     color: 0x888888,
   },
   [BlockType.WOOD]: {
@@ -65,6 +70,7 @@ export const BlockDefinitions: Record<BlockType, BlockDefinition> = {
     name: "Wood",
     isSolid: true,
     isTransparent: false,
+    isOpaque: true,
     color: 0xa0522d,
   },
   [BlockType.LEAVES]: {
@@ -72,6 +78,7 @@ export const BlockDefinitions: Record<BlockType, BlockDefinition> = {
     name: "Leaves",
     isSolid: true,
     isTransparent: true,
+    isOpaque: false,
     color: 0x228b22,
   },
   [BlockType.WATER]: {
@@ -79,6 +86,7 @@ export const BlockDefinitions: Record<BlockType, BlockDefinition> = {
     name: "Water",
     isSolid: false,
     isTransparent: true,
+    isOpaque: false,
     color: 0x0000ff,
   },
 };

@@ -24,7 +24,7 @@ export class World {
      * @param chunkZ Coordenada Z del chunk.
      * @returns Una cadena que representa la clave del chunk.
      */
-    private getChunkKey(chunkX: number, chunkY: number, chunkZ: number): string {
+    public getChunkKey(chunkX: number, chunkY: number, chunkZ: number): string {
         return `${chunkX},${chunkY},${chunkZ}`;
     }
 
