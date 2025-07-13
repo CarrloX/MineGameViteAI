@@ -33,6 +33,11 @@ export class App {
         this.scene = this.renderer.getScene(); // Obtener la escena del renderer
         this.camera = this.renderer.getCamera(); // Obtener la cámara del renderer
 
+                // --- TEMPORARY CAMERA ADJUSTMENT ---
+        this.camera.position.set(CHUNK_SIZE * 1.5, CHUNK_SIZE * 1.5, CHUNK_SIZE * 1.5);
+        this.camera.lookAt(new THREE.Vector3(CHUNK_SIZE / 2, CHUNK_SIZE / 2, CHUNK_SIZE / 2));
+        // --- FIN DE TEMPORARY CAMERA ADJUSTMENT ---
+
         // Opcional pero recomendado: configurar el fondo de la escena
         if (this.scene instanceof THREE.Scene) { // Asegurarse de que es una instancia de THREE.Scene
             this.scene.background = new THREE.Color(0x87ceeb); // Un color de cielo azul claro
@@ -46,12 +51,25 @@ export class App {
         const chunkZ = 0;
 
         const testChunk = this.world.getChunk(chunkX, chunkY, chunkZ);
-        console.log("Bloque en 0,0,0 (dentro del chunk 0,0,0):", this.world.getBlock(0,0,0));
-        console.log("Bloque en 0,1,0 (dentro del chunk 0,0,0):", this.world.getBlock(0,1,0));
+
+        // --- INICIO DE NUEVAS LÍNEAS DE DEPURACIÓN ---
+        console.log("DEBUG: Bloque en (0,0,0) del mundo:", this.world.getBlock(0,0,0));
+        console.log("DEBUG: Bloque en (0,1,0) del mundo:", this.world.getBlock(0,1,0));
+        console.log("DEBUG: Bloque en (0,0,1) del mundo:", this.world.getBlock(0,0,1));
+        console.log("DEBUG: Bloque en (1,0,0) del mundo:", this.world.getBlock(1,0,0));
+        // --- FIN DE NUEVAS LÍNEAS DE DEPURACIÓN ---
 
         // Generar la geometría del chunk con el mesher
-        // Por ahora, pasamos 'undefined' como chunks vecinos ya que estamos probando un solo chunk.
         const chunkGeometry = this.mesher.generateMesh(testChunk, undefined);
+
+        // --- INICIO DE NUEVAS LÍNEAS DE DEPURACIÓN ---
+        console.log("DEBUG: Geometría del chunk generada:", chunkGeometry);
+        if (chunkGeometry.attributes.position) {
+            console.log("DEBUG: Número de vértices en la geometría:", chunkGeometry.attributes.position.count);
+        } else {
+            console.log("DEBUG: La geometría no tiene atributo 'position' (probablemente vacía).");
+        }
+        // --- FIN DE NUEVAS LÍNEAS DE DEPURACIÓN ---
 
         // Crear un material para el chunk. MeshBasicMaterial no necesita luces.
         const material = new THREE.MeshBasicMaterial({

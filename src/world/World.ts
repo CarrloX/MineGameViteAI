@@ -38,15 +38,29 @@ export class World {
      */
     public getChunk(chunkX: number, chunkY: number, chunkZ: number): Chunk {
         const key = this.getChunkKey(chunkX, chunkY, chunkZ);
-        let chunk = this.chunks.get(key);
-
-        if (!chunk) {
-            chunk = new Chunk(chunkX, chunkY, chunkZ);
-            this.generateChunkTerrain(chunk); // Generar terreno cuando se crea el chunk
-            this.chunks.set(key, chunk);
-            // console.log(`Chunk [${chunkX},${chunkY},${chunkZ}] created and generated.`);
+        if (!this.chunks.has(key)) {
+            const newChunk = new Chunk(chunkX, chunkY, chunkZ);
+            this.generateTestChunk(newChunk); // <-- Llama a una función para poblarlo
+            this.chunks.set(key, newChunk);
+            console.log(`Chunk ${chunkX},${chunkY},${chunkZ} generated.`);
         }
-        return chunk;
+        return this.chunks.get(key)!;
+    }
+
+        // NUEVO MÉTODO PARA GENERAR UN CHUNK DE PRUEBA SIMPLE
+    private generateTestChunk(chunk: Chunk): void {
+        for (let x = 0; x < CHUNK_SIZE; x++) {
+            for (let z = 0; z < CHUNK_SIZE; z++) {
+                // Rellenar la capa inferior del chunk con bloques de tierra (o piedra)
+                // Asegúrate de que BlockType.GRASS o BlockType.STONE sea un bloque opaco
+                chunk.setBlock(x, 0, z, BlockType.GRASS); // Asume GRASS es BlockType.1 o similar
+
+                // Rellenar las capas superiores con aire
+                for (let y = 1; y < CHUNK_SIZE; y++) {
+                    chunk.setBlock(x, y, z, BlockType.AIR); // Asume AIR es BlockType.0
+                }
+            }
+        }
     }
 
     /**
