@@ -4,7 +4,6 @@ import { Chunk } from '../world/Chunk';
 import { BlockType, getBlockDefinition } from '../world/Block';
 import { CHUNK_SIZE } from '../utils/constants';
 import type { IMesher } from './IMesher'; // Importa la interfaz IMesher
- // Importa la interfaz IMesher
 
 // =========================================================================
 // CONSTANTES GLOBALES O DE MÓDULO PARA EL MESHER
@@ -367,6 +366,10 @@ export class GreedyMesher implements IMesher {
                                 P[u] = x[u] + side.positions[i * 3 + u] * width;
                                 P[v] = x[v] + side.positions[i * 3 + v] * height;
 
+                                // --- NUEVO LOG DE DEPURACIÓN DE VÉRTICES ---
+                                console.log(`VERTEX_POS_DEBUG: dim=${dim}, i=${i}, P_local=[${P[0]},${P[1]},${P[2]}], width=${width}, height=${height}`);
+                                // --- FIN NUEVO LOG ---
+
                                 positions.push(
                                     P[0] + chunk.position.x * CHUNK_SIZE,
                                     P[1] + chunk.position.y * CHUNK_SIZE,
@@ -375,17 +378,17 @@ export class GreedyMesher implements IMesher {
                                 normals.push(...side.normal);
                             }
 
-                            // Añadir UVs
-                            // Las UVs deben ser ajustadas por el width y height del quad fusionado.
-                            // Esto asume que 0,0 a 1,1 es la textura completa para una cara de bloque.
-                            // Si tienes un atlas, esto necesitará ser más complejo.
-                            // Por ahora, simplemente escalamos las UVs estándar por el tamaño del quad.
-                            const baseUVs = side.uv; // UVs base (0-1) para un bloque 1x1
+                            // Añadir UVs (simplificado para depuración)
+                            // Para un quad fusionado, los UVs deberían ser 0 o 1 en las esquinas,
+                            // independientemente del tamaño del quad, si usamos una textura que se repite.
+                            // Si es una textura que se estira, necesitaríamos (0,0), (width,0), (0,height), (width,height)
+                            // Pero para ver la forma, usemos UVs 0-1 para cada vértice del quad.
+                            // Esto hará que la textura se estire sobre todo el quad.
                             uvs.push(
-                                baseUVs[0],             baseUVs[1],
-                                baseUVs[2] * width,     baseUVs[3],
-                                baseUVs[4],             baseUVs[5] * height,
-                                baseUVs[6] * width,     baseUVs[7] * height
+                                faces[faceIndex].uv[0], faces[faceIndex].uv[1], // Vértice 0
+                                faces[faceIndex].uv[2], faces[faceIndex].uv[3], // Vértice 1
+                                faces[faceIndex].uv[4], faces[faceIndex].uv[5], // Vértice 2
+                                faces[faceIndex].uv[6], faces[faceIndex].uv[7]  // Vértice 3
                             );
 
                             // Añadir índices
