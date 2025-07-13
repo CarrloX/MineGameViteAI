@@ -112,7 +112,7 @@ export class App {
         this.gameLoop.start();
     }
 
-    private update(deltaTime: number): void {
+    private update(_deltaTime: number): void {
         // Lógica de actualización del mundo y jugador aquí
     }
 

@@ -338,7 +338,6 @@ export class GreedyMesher implements IMesher {
                                 if (k < width) break;
                             }
 
-                            const blockId = Math.abs(maskValue);
                             const faceIndex = (maskValue > 0) ? dim * 2 + 1 : dim * 2;
                             const side = faces[faceIndex];
 
