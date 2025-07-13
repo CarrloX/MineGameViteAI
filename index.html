@@ -6,13 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MineGame 2.0 ViteAI</title>
     <style>
-        /* Un estilo CSS muy básico para el canvas a pantalla completa */
+        /* MUY IMPORTANTE: Asegúrate de que este CSS esté en tu index.html */
         body { margin: 0; overflow: hidden; }
-        canvas { display: block; }
+        canvas { display: block; width: 100vw; height: 100vh; } /* Añadido width/height 100% */
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
-    <script type="module" src="/src/main.ts"></script>
+    <canvas id="gameCanvas"></canvas> <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

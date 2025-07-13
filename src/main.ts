@@ -1,16 +1,16 @@
 // src/main.ts
 import { App } from './core/App';
 
+// Asegúrate de que el ID aquí coincide con el del index.html
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
 if (!canvas) {
     console.error("No se encontró el elemento canvas con ID 'gameCanvas'.");
-    throw new Error("Canvas element not found.");
+    throw new Error("Canvas element not found."); // Detener la ejecución si no se encuentra
 }
 
 const app = new App();
 
-// Inicializar la aplicación con el canvas
-app.initialize(canvas)
+app.initialize(canvas) // Asegúrate de que 'canvas' se pasa aquí
     .then(() => {
         console.log("Aplicación inicializada y bucle de juego comenzado.");
     })
@@ -18,7 +18,6 @@ app.initialize(canvas)
         console.error("Error al inicializar la aplicación:", error);
     });
 
-// Opcional: Manejar la limpieza al cerrar la página
 window.addEventListener('beforeunload', () => {
     app.dispose();
 });

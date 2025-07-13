@@ -1,8 +1,8 @@
 // src/core/App.ts
-import * as THREE from 'three';
 import { GameLoop } from './GameLoop';
-import type { IRenderer } from '../rendering/IRenderer';
+import type { IRenderer } from '../rendering/IRenderer'; // <- Asegúrate del 'type' aquí
 import { ThreeRenderer } from '../rendering/ThreeRenderer';
+import * as THREE from 'three'; // Importar THREE
 
 export class App {
     private renderer: IRenderer;
@@ -13,27 +13,25 @@ export class App {
 
     constructor() {
         this.renderer = new ThreeRenderer();
-        // Los callbacks para el bucle de juego llamarán a los métodos de la propia App
         this.gameLoop = new GameLoop(this.update.bind(this), this.render.bind(this));
-        // Las propiedades scene y camera se obtendrán del renderizador después de la inicialización
-        this.scene = new THREE.Scene(); // Se sobrescribirá al inicializar el renderer
-        this.camera = new THREE.Camera(); // Se sobrescribirá al inicializar el renderer
+        // Es importante que scene y camera se obtengan del renderer INICIALIZADO
+        // Por eso las dejamos sin inicializar aquí o con valores por defecto.
+        this.scene = new THREE.Scene(); // Temporal, se sobrescribirá
+        this.camera = new THREE.Camera(); // Temporal, se sobrescribirá
     }
 
     public async initialize(container: HTMLElement | HTMLCanvasElement): Promise<void> {
-        this.renderer.initialize(container);
-        this.scene = this.renderer.getScene();
-        this.camera = this.renderer.getCamera();
+        this.renderer.initialize(container); // Aquí se inicializan renderer, scene y camera
+        this.scene = this.renderer.getScene(); // Obtener la escena del renderizador
+        this.camera = this.renderer.getCamera(); // Obtener la cámara del renderizador
 
         // *** ELEMENTOS DE PRUEBA ***
-        // Añadir un cubo de prueba para verificar que el renderizado funciona
         const geometry = new THREE.BoxGeometry(10, 10, 10);
-        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Material básico sin necesidad de luz
         this.cube = new THREE.Mesh(geometry, material);
-        this.scene.add(this.cube);
+        this.scene.add(this.cube); // Añadir el cubo a LA ESCENA DEL RENDERIZADOR
 
-        // Añadir una luz ambiental simple para que se vea el cubo
-        const ambientLight = new THREE.AmbientLight(0x404040, 5); // soft white light
+        const ambientLight = new THREE.AmbientLight(0x404040, 5);
         this.scene.add(ambientLight);
         // *** FIN ELEMENTOS DE PRUEBA ***
 
