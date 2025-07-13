@@ -1,8 +1,7 @@
 // src/world/World.ts
-import * as THREE from 'three';
 import { Chunk } from './Chunk';
-import { BlockType, getBlockDefinition } from './Block';
-import { CHUNK_SIZE, WORLD_HEIGHT_CHUNKS, WORLD_HEIGHT_BLOCKS } from '../utils/constants';
+import { BlockType } from './Block';
+import { CHUNK_SIZE, WORLD_HEIGHT_BLOCKS } from '../utils/constants';
 
 /**
  * La clase World gestiona la colección de chunks y proporciona métodos
@@ -55,21 +54,6 @@ export class World {
         return this.chunks.get(key)!;
     }
 
-        // NUEVO MÉTODO PARA GENERAR UN CHUNK DE PRUEBA SIMPLE
-    private generateTestChunk(chunk: Chunk): void {
-        for (let x = 0; x < CHUNK_SIZE; x++) {
-            for (let z = 0; z < CHUNK_SIZE; z++) {
-                // Rellenar la capa inferior del chunk con bloques de tierra (o piedra)
-                // Asegúrate de que BlockType.GRASS o BlockType.STONE sea un bloque opaco
-                chunk.setBlock(x, 0, z, BlockType.GRASS); // Asume GRASS es BlockType.1 o similar
-
-                // Rellenar las capas superiores con aire
-                for (let y = 1; y < CHUNK_SIZE; y++) {
-                    chunk.setBlock(x, y, z, BlockType.AIR); // Asume AIR es BlockType.0
-                }
-            }
-        }
-    }
 
     /**
      * Obtiene el tipo de bloque en coordenadas globales del mundo.
@@ -125,32 +109,6 @@ export class World {
         // 2. Recalcular la luz en el área afectada.
     }
 
-    /**
-     * *** GENERACIÓN DE TERRENO SIMPLE (TEMPORAL) ***
-     * Más adelante, esto se moverá a una clase TerrainGenerator.
-     * Por ahora, crea un suelo plano para empezar.
-     * @param chunk El chunk al que se le generará el terreno.
-     */
-    private generateChunkTerrain(chunk: Chunk): void {
-        // Este es un generador de terreno muy, muy simple.
-        // Simplemente llena la parte inferior del chunk con DIRTy GRASS.
-        // Y luego bloques de AIr arriba
-        for (let x = 0; x < CHUNK_SIZE; x++) {
-            for (let z = 0; z < CHUNK_SIZE; z++) {
-                const surfaceY = Math.floor(CHUNK_SIZE / 2); // Ejemplo: superficie a la mitad del chunk
-
-                for (let y = 0; y < CHUNK_SIZE; y++) {
-                    if (y < surfaceY) {
-                        chunk.setBlock(x, y, z, BlockType.DIRT); // Tierra debajo de la superficie
-                    } else if (y === surfaceY) {
-                        chunk.setBlock(x, y, z, BlockType.GRASS); // Superficie de césped
-                    } else {
-                        chunk.setBlock(x, y, z, BlockType.AIR); // Aire encima
-                    }
-                }
-            }
-        }
-    }
 
     /**
      * Obtiene todos los chunks cargados actualmente.
