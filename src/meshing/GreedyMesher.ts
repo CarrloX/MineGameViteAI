@@ -222,15 +222,13 @@ export class GreedyMesher implements IMesher {
         let uvs: number[] = [];
         let indices: number[] = [];
         let numVertices = 0; // Contador de vértices agregados
+        let numQuadsGenerated = 0; // Contador de quads generados
 
         // Vector auxiliar para las coordenadas del bloque actual (x, y, z) en el espacio del mundo.
         // Se reutiliza en los bucles para eficiencia.
         // IMPORTANTE: Estas 'x' son coordenadas relativas al origen del chunk 0,0,0
         // pero se ajustan en la lógica de getBlockFromWorld para ser coordenadas de mundo.
         let x: [number, number, number] = [0, 0, 0];
-
-        // Reinicia el array 'processed' al inicio de cada generación de malla para este chunk.
-        this.processed.fill(0);
 
         // Itera sobre cada dimensión (X, Y, Z)
         // Se realizan 3 pases, uno por cada eje principal.
@@ -275,7 +273,6 @@ export class GreedyMesher implements IMesher {
 
                         // Obtener el índice del bloque actual en el array `processed`.
                         // Solo se marcan como procesados los bloques *dentro* del chunk.
-                        const blockIndexForProcessed = this.getChunkBlockIndex(x[0], x[1], x[2]);
 
                         // Si el bloque ya fue procesado en esta dirección (en el mismo pase del eje actual), saltarlo.
                         // Esto evita que las caras ya fusionadas se procesen de nuevo.
@@ -323,7 +320,7 @@ export class GreedyMesher implements IMesher {
                     for (x[u] = 0; x[u] < CHUNK_SIZE; ) {
                         const maskValue = mask[x[v] * CHUNK_SIZE + x[u]];
 
-                        if (maskValue !== 0 && (x[dim] < CHUNK_SIZE || maskValue < 0)) {
+                        if (maskValue !== 0) {
                             width = 1;
                             let height = 1;
 
@@ -349,6 +346,8 @@ export class GreedyMesher implements IMesher {
 
                             // Los logs de depuración del mesher
                             console.log(`MESHER_DEBUG: Found quad at local_chunk_coords=[${x[0]},${x[1]},${x[2]}] (dim=${dim}, u=${u}, v=${v}) with maskValue=${maskValue}, width=${width}, height=${height}`);
+
+                            numQuadsGenerated++; // <-- INCREMENTA EL CONTADOR DE QUADS AQUÍ
 
                             // Añadir vértices y normales para el quad fusionado
                             for (let i = 0; i < 4; ++i) {
@@ -428,7 +427,7 @@ export class GreedyMesher implements IMesher {
                 }
             }
         }
-
+        console.log(`MESHER_SUMMARY: Total quads generated: ${numQuadsGenerated}`); // <-- LOG FINAL
         return { positions, normals, uvs, indices };
     }
 }
