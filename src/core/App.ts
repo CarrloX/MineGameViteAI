@@ -7,12 +7,12 @@ import * as THREE from 'three';
 import type { IMesher } from '../meshing/IMesher';
 import { GreedyMesher } from '../meshing/GreedyMesher';
 import { CHUNK_SIZE } from '../utils/constants';
-import { Chunk } from '../world/Chunk';
+import type { Chunk } from '../world/Chunk';
 import { CameraController } from '../player/CameraController';
 
-// --- ¡NUEVA IMPORTACIÓN DEL ATLAS DE TEXTURAS! ---
-import blockAtlasTextureUrl from '../assets/textures/block_atlas.png'; // Vite procesará esto
-// -------------------------------------------------
+// --- IMPORTACIÓN DEL ATLAS DE TEXTURAS ---
+import blockAtlasTextureUrl from '../assets/textures/block_atlas.png';
+// -----------------------------------------
 
 export class App {
     private renderer: IRenderer;
@@ -46,7 +46,22 @@ export class App {
         this.cameraController = new CameraController(this.camera as THREE.PerspectiveCamera, container);
 
         if (this.scene instanceof THREE.Scene) {
-            this.scene.background = new THREE.Color(0x87ceeb);
+            this.scene.background = new THREE.Color(0x87ceeb); // Un color de cielo azul claro
+
+            // --- AÑADIR LUCES A LA ESCENA ---
+            // Luz ambiental (ilumina uniformemente desde todas las direcciones)
+            const ambientLight = new THREE.AmbientLight(0x404040, 2); // Color gris claro, intensidad 2
+            this.scene.add(ambientLight);
+
+            // Luz direccional (simula el sol)
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // Luz blanca, intensidad 1
+            directionalLight.position.set(5, 10, 7.5); // Posición de la luz
+            this.scene.add(directionalLight);
+
+            // Opcional: Helper para visualizar la luz direccional
+            // const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 5);
+            // this.scene.add(directionalLightHelper);
+            // --- FIN DE AÑADIR LUCES ---
         }
 
         const chunkX = 0;
@@ -64,21 +79,18 @@ export class App {
 
         const chunkGeometryData = this.mesher.generateMesh(testChunk, neighborChunksMap);
 
-        // --- INICIO DE CÓDIGO PARA CARGAR EL ATLAS DE TEXTURAS ---
+        // --- INICIO DE CÓDIGO PARA CARGAR EL ATLAS DE TEXTURAS (MODIFICADO MATERIAL) ---
         const textureLoader = new THREE.TextureLoader();
         let atlasTexture: THREE.Texture;
 
         try {
-            // Carga el atlas de texturas
             atlasTexture = await textureLoader.loadAsync(blockAtlasTextureUrl);
-            atlasTexture.wrapS = THREE.RepeatWrapping; // Asegura que la textura se repita en U
-            atlasTexture.wrapT = THREE.RepeatWrapping; // Asegura que la textura se repita en V
-            // No necesitamos texture.repeat.set(width, height) aquí, ya que el mesher calcula las UVs.
+            atlasTexture.wrapS = THREE.RepeatWrapping;
+            atlasTexture.wrapT = THREE.RepeatWrapping;
 
             console.log("Atlas de texturas 'block_atlas.png' cargado con éxito.");
         } catch (error) {
             console.error("Error al cargar el atlas de texturas 'block_atlas.png':", error);
-            // Fallback a una textura de error magenta
             const canvas = document.createElement('canvas');
             canvas.width = 1;
             canvas.height = 1;
@@ -90,13 +102,13 @@ export class App {
             atlasTexture = new THREE.CanvasTexture(canvas);
         }
 
-        // Crear un material usando el atlas de texturas
-        const material = new THREE.MeshBasicMaterial({
-            map: atlasTexture, // <-- ¡Asigna el atlas aquí!
+        // --- ¡CAMBIAR A MeshLambertMaterial para que interactúe con la luz! ---
+        const material = new THREE.MeshLambertMaterial({
+            map: atlasTexture,
             vertexColors: false,
             side: THREE.DoubleSide
         });
-        // --- FIN DE CÓDIGO PARA CARGAR EL ATLAS DE TEXTURAS ---
+        // --- FIN DE CÓDIGO PARA CARGAR EL ATLAS DE TEXTURAS (MODIFICADO MATERIAL) ---
 
 
         const chunkGeometry = new THREE.BufferGeometry();
@@ -117,7 +129,7 @@ export class App {
 
         chunkMesh.position.set(
             chunkX * CHUNK_SIZE,
-            chunkY * CHUNK_SIZE, // <-- ¡Corregido! Asegúrate de que sea CHUNK_SIZE
+            chunkY * CHUNK_SIZE,
             chunkZ * CHUNK_SIZE
         );
 
