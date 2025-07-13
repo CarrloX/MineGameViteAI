@@ -1,7 +1,7 @@
 # MineGameViteAI
 
 Este proyecto es un juego voxel desarrollado con Vite y TypeScript.
-Puedes probar el juego directamente desde aqui [text](https://mine-game-vite-ai.vercel.app/)
+Puedes probar el juego directamente desde aqui [Clickeame](https://mine-game-vite-ai.vercel.app/)
 
 ## Estructura del proyecto
 
