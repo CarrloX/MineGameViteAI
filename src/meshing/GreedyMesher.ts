@@ -248,12 +248,13 @@ export class GreedyMesher implements IMesher {
             // Esto es crucial porque los quads solo se fusionan en un único pase por dimensión.
             // Las caras que ya fueron parte de un quad en una dimensión (ej. X) no deben ser
             // procesadas de nuevo en la misma dirección, pero sí en otras direcciones (ej. Y o Z).
-            this.processed.fill(0);
 
             // Itera a través de las "rebanadas" del chunk a lo largo de la dimensión actual.
             // Se itera desde -1 hasta CHUNK_SIZE para incluir los bordes del chunk
             // y permitir la comparación con bloques "fuera" del chunk (aire o chunks vecinos).
             for (x[dim] = -1; x[dim] < CHUNK_SIZE + 1; ++x[dim]) {
+
+                this.processed.fill(0);
 
                 // Creamos una "máscara" 2D para la rebanada actual.
                 // Almacena el ID del bloque (o su negativo para indicar la cara opuesta)
@@ -279,11 +280,6 @@ export class GreedyMesher implements IMesher {
                         // Si el bloque ya fue procesado en esta dirección (en el mismo pase del eje actual), saltarlo.
                         // Esto evita que las caras ya fusionadas se procesen de nuevo.
                         // Solo aplica si la coordenada x[dim] está dentro del chunk actual y el índice es válido.
-                        if (x[dim] >= 0 && x[dim] < CHUNK_SIZE &&
-                            blockIndexForProcessed !== -1 && this.processed[blockIndexForProcessed] !== 0) {
-                            mask[x[v] * CHUNK_SIZE + x[u]] = 0; // Asegurarse de que la máscara sea 0
-                            continue;
-                        }
 
                         // Obtener el tipo de bloque actual (A) y su definición.
                         const blockA = this.getBlockFromWorld(
@@ -382,9 +378,17 @@ export class GreedyMesher implements IMesher {
                             }
 
                             // Añadir UVs
-                            for (let i = 0; i < side.uv.length; i += 2) {
-                                uvs.push(side.uv[i + 0], side.uv[i + 1]);
-                            }
+                            // Las UVs deben ser ajustadas por el width y height del quad fusionado.
+                            // Esto asume que 0,0 a 1,1 es la textura completa para una cara de bloque.
+                            // Si tienes un atlas, esto necesitará ser más complejo.
+                            // Por ahora, simplemente escalamos las UVs estándar por el tamaño del quad.
+                            const baseUVs = side.uv; // UVs base (0-1) para un bloque 1x1
+                            uvs.push(
+                                baseUVs[0],             baseUVs[1],
+                                baseUVs[2] * width,     baseUVs[3],
+                                baseUVs[4],             baseUVs[5] * height,
+                                baseUVs[6] * width,     baseUVs[7] * height
+                            );
 
                             // Añadir índices
                             indices.push(

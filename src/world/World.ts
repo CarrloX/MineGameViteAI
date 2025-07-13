@@ -39,10 +39,18 @@ export class World {
     public getChunk(chunkX: number, chunkY: number, chunkZ: number): Chunk {
         const key = this.getChunkKey(chunkX, chunkY, chunkZ);
         if (!this.chunks.has(key)) {
+            console.log(`Generating new chunk at ${chunkX},${chunkY},${chunkZ}`);
             const newChunk = new Chunk(chunkX, chunkY, chunkZ);
-            this.generateTestChunk(newChunk); // <-- Llama a una función para poblarlo
+            // ESTO DEBE LLENAR TODO EL CHUNK CON BLOQUES SÓLIDOS PARA LA PRUEBA
+            for (let x = 0; x < CHUNK_SIZE; x++) {
+                for (let y = 0; y < CHUNK_SIZE; y++) {
+                    for (let z = 0; z < CHUNK_SIZE; z++) {
+                        // Si quieres un cubo sólido completo:
+                        newChunk.setBlock(x, y, z, BlockType.GRASS); // Asume GRASS es ID 1 y es opaco
+                    }
+                }
+            }
             this.chunks.set(key, newChunk);
-            console.log(`Chunk ${chunkX},${chunkY},${chunkZ} generated.`);
         }
         return this.chunks.get(key)!;
     }

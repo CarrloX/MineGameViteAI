@@ -1,18 +1,11 @@
-import * as THREE from 'three';
-import { Chunk } from '../world/Chunk';
+import { Chunk } from '../world/Chunk'; // Asumiendo que Chunk existe
 
-/**
- * Define la interfaz para un generador de mallas (mesher)
- * que convierte los datos de un chunk en una geometría de Three.js.
- */
 export interface IMesher {
     /**
-     * Genera la geometría 3D para un chunk dado.
-     * @param chunk El chunk para el que se generará la malla.
-     * @param neighborChunks Un objeto opcional con chunks vecinos para culling de caras.
-     * @returns Una THREE.BufferGeometry que representa la malla del chunk.
+     * Genera la geometría de la malla para un chunk dado, considerando los chunks vecinos.
+     * @param chunk El chunk actual para el que se generará la malla.
+     * @param neighborChunks Un mapa de chunks vecinos, indexados por una clave de cadena (ej. "x,y,z").
+     * @returns Un objeto que contiene arrays de posiciones, normales, UVs e índices.
      */
-    generateMesh(chunk: Chunk, neighborChunks?: {
-        nx?: Chunk; px?: Chunk; ny?: Chunk; py?: Chunk; nz?: Chunk; pz?: Chunk;
-    }): THREE.BufferGeometry;
+    generateMesh(chunk: Chunk, neighborChunks: Map<string, Chunk>): { positions: number[], normals: number[], uvs: number[], indices: number[] };
 }
