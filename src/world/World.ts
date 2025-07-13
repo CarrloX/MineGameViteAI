@@ -1,7 +1,7 @@
 // src/world/World.ts
 import { Chunk } from './Chunk';
 // --- ¡MODIFICADO AQUÍ! Importa BlockType (valor) y BlockTypeValue (tipo) ---
-import { BlockType, getBlockDefinition, type BlockTypeValue } from './Block';
+import { BlockType, type BlockTypeValue } from './Block';
 import { CHUNK_SIZE } from '../utils/constants';
 
 export class World {

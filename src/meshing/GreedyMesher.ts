@@ -3,7 +3,7 @@
 import { Chunk } from '../world/Chunk';
 // Importa BlockType (el objeto de valores), getBlockDefinition (la función),
 // y los tipos BlockDefinition y BlockTypeValue.
-import { BlockType, getBlockDefinition, type BlockDefinition, type BlockTypeValue } from '../world/Block';
+import { BlockType, getBlockDefinition, type BlockTypeValue } from '../world/Block';
 import { CHUNK_SIZE, ATLAS_WIDTH_TILES, ATLAS_HEIGHT_TILES } from '../utils/constants';
 import type { IMesher } from './IMesher';
 
