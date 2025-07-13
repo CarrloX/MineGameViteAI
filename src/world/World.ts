@@ -1,51 +1,61 @@
 // src/world/World.ts
 import { Chunk } from './Chunk';
-import { BlockType } from './Block';
-import { CHUNK_SIZE, WORLD_HEIGHT_BLOCKS } from '../utils/constants';
+// --- ¡MODIFICADO AQUÍ! Importa BlockType (valor) y BlockTypeValue (tipo) ---
+import { BlockType, getBlockDefinition, type BlockTypeValue } from './Block';
+import { CHUNK_SIZE } from '../utils/constants';
 
-/**
- * La clase World gestiona la colección de chunks y proporciona métodos
- * para interactuar con los bloques en coordenadas globales.
- */
 export class World {
-    // Un mapa para almacenar los chunks. La clave será una cadena "x,y,z"
-    private chunks: Map<string, Chunk>;
+    private chunks = new Map<string, Chunk>();
 
     constructor() {
-        this.chunks = new Map<string, Chunk>();
-        console.log("World initialized.");
+        // Inicializa un chunk de prueba en la posición (0,0,0)
+        // Esto es solo para tener un chunk inicial para renderizar.
+        // En un juego real, los chunks se cargarían/generarían dinámicamente.
+        const initialChunkX = 0;
+        const initialChunkY = 0;
+        const initialChunkZ = 0;
+        const initialChunk = new Chunk(initialChunkX, initialChunkY, initialChunkZ);
+
+        // Llena el chunk inicial con bloques de GRASS para que sea visible
+        for (let x = 0; x < CHUNK_SIZE; x++) {
+            for (let y = 0; y < CHUNK_SIZE; y++) {
+                for (let z = 0; z < CHUNK_SIZE; z++) {
+                    // Llenar todo el chunk con GRASS para la prueba
+                    initialChunk.setBlock(x, y, z, BlockType.GRASS); // <-- Usa BlockType.GRASS (el valor)
+                }
+            }
+        }
+        this.chunks.set(this.getChunkKey(initialChunkX, initialChunkY, initialChunkZ), initialChunk);
     }
 
     /**
-     * Genera una clave única para un chunk a partir de sus coordenadas.
-     * @param chunkX Coordenada X del chunk.
-     * @param chunkY Coordenada Y del chunk.
-     * @param chunkZ Coordenada Z del chunk.
-     * @returns Una cadena que representa la clave del chunk.
+     * Obtiene una clave de cadena para un chunk basada en sus coordenadas.
+     * @param x Coordenada X del chunk.
+     * @param y Coordenada Y del chunk.
+     * @param z Coordenada Z del chunk.
+     * @returns Una cadena única que identifica el chunk.
      */
-    public getChunkKey(chunkX: number, chunkY: number, chunkZ: number): string {
-        return `${chunkX},${chunkY},${chunkZ}`;
+    public getChunkKey(x: number, y: number, z: number): string {
+        return `${x},${y},${z}`;
     }
 
     /**
-     * Obtiene un chunk por sus coordenadas de chunk.
-     * Si el chunk no existe, lo crea, genera su terreno y lo añade al mundo.
+     * Obtiene un chunk en las coordenadas dadas. Si no existe, lo crea.
      * @param chunkX Coordenada X del chunk.
      * @param chunkY Coordenada Y del chunk.
      * @param chunkZ Coordenada Z del chunk.
-     * @returns El Chunk solicitado.
+     * @returns La instancia del Chunk.
      */
     public getChunk(chunkX: number, chunkY: number, chunkZ: number): Chunk {
         const key = this.getChunkKey(chunkX, chunkY, chunkZ);
         if (!this.chunks.has(key)) {
             console.log(`Generating new chunk at ${chunkX},${chunkY},${chunkZ}`);
             const newChunk = new Chunk(chunkX, chunkY, chunkZ);
-            // ESTO DEBE LLENAR TODO EL CHUNK CON BLOQUES SÓLIDOS PARA LA PRUEBA
+            // Llena el nuevo chunk con bloques de GRASS por defecto para la visualización
             for (let x = 0; x < CHUNK_SIZE; x++) {
                 for (let y = 0; y < CHUNK_SIZE; y++) {
                     for (let z = 0; z < CHUNK_SIZE; z++) {
-                        // Si quieres un cubo sólido completo:
-                        newChunk.setBlock(x, y, z, BlockType.GRASS); // Asume GRASS es ID 1 y es opaco
+                        newChunk.setBlock(x, y, z, BlockType.GRASS); // <-- Usa BlockType.GRASS (el valor)
                     }
                 }
             }
@@ -54,71 +64,43 @@ export class World {
         return this.chunks.get(key)!;
     }
 
-
     /**
-     * Obtiene el tipo de bloque en coordenadas globales del mundo.
-     * @param worldX Coordenada X global.
-     * @param worldY Coordenada Y global.
-     * @param worldZ Coordenada Z global.
-     * @returns El BlockType en las coordenadas dadas, o AIR si está fuera de los límites del mundo o chunk no encontrado.
+     * Obtiene el tipo de bloque en una coordenada de mundo específica.
+     * @param wx Coordenada X del mundo.
+     * @param wy Coordenada Y del mundo.
+     * @param wz Coordenada Z del mundo.
+     * @returns El BlockTypeValue del bloque en esa posición.
      */
-    public getBlock(worldX: number, worldY: number, worldZ: number): BlockType {
-        // Manejar límites del mundo
-        if (worldY < 0 || worldY >= WORLD_HEIGHT_BLOCKS) {
-            return BlockType.AIR;
-        }
+    public getBlock(wx: number, wy: number, wz: number): BlockTypeValue { // <-- ¡MODIFICADO AQUÍ! Tipo de retorno
+        const chunkX = Math.floor(wx / CHUNK_SIZE);
+        const chunkY = Math.floor(wy / CHUNK_SIZE);
+        const chunkZ = Math.floor(wz / CHUNK_SIZE);
 
-        // Convertir coordenadas globales a coordenadas de chunk y locales
-        const chunkX = Math.floor(worldX / CHUNK_SIZE);
-        const chunkY = Math.floor(worldY / CHUNK_SIZE);
-        const chunkZ = Math.floor(worldZ / CHUNK_SIZE);
-
-        const localX = worldX - chunkX * CHUNK_SIZE;
-        const localY = worldY - chunkY * CHUNK_SIZE;
-        const localZ = worldZ - chunkZ * CHUNK_SIZE;
+        const localX = (wx % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
+        const localY = (wy % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
+        const localZ = (wz % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
 
         const chunk = this.getChunk(chunkX, chunkY, chunkZ);
         return chunk.getBlock(localX, localY, localZ);
     }
 
     /**
-     * Establece el tipo de bloque en coordenadas globales del mundo.
-     * @param worldX Coordenada X global.
-     * @param worldY Coordenada Y global.
-     * @param worldZ Coordenada Z global.
-     * @param type El BlockType a establecer.
+     * Establece el tipo de bloque en una coordenada de mundo específica.
+     * @param wx Coordenada X del mundo.
+     * @param wy Coordenada Y del mundo.
+     * @param wz Coordenada Z del mundo.
+     * @param type El nuevo BlockTypeValue para el bloque.
      */
-    public setBlock(worldX: number, worldY: number, worldZ: number, type: BlockType): void {
-        if (worldY < 0 || worldY >= WORLD_HEIGHT_BLOCKS) {
-            return; // Fuera de los límites verticales del mundo
-        }
+    public setBlock(wx: number, wy: number, wz: number, type: BlockTypeValue): void { // <-- ¡MODIFICADO AQUÍ! Tipo de parámetro
+        const chunkX = Math.floor(wx / CHUNK_SIZE);
+        const chunkY = Math.floor(wy / CHUNK_SIZE);
+        const chunkZ = Math.floor(wz / CHUNK_SIZE);
 
-        const chunkX = Math.floor(worldX / CHUNK_SIZE);
-        const chunkY = Math.floor(worldY / CHUNK_SIZE);
-        const chunkZ = Math.floor(worldZ / CHUNK_SIZE);
+        const localX = (wx % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
+        const localY = (wy % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
+        const localZ = (wz % CHUNK_SIZE + CHUNK_SIZE) % CHUNK_SIZE;
 
-        const localX = worldX - chunkX * CHUNK_SIZE;
-        const localY = worldY - chunkY * CHUNK_SIZE;
-        const localZ = worldZ - chunkZ * CHUNK_SIZE;
-
-        const chunk = this.getChunk(chunkX, chunkY, chunkZ); // Obtener (o crear) el chunk
+        const chunk = this.getChunk(chunkX, chunkY, chunkZ);
         chunk.setBlock(localX, localY, localZ, type);
-
-        // TODO: Más adelante, al cambiar un bloque, se necesitará:
-        // 1. Marcar el chunk como "dirty" para regenerar su malla.
-        // 2. Recalcular la luz en el área afectada.
     }
-
-
-    /**
-     * Obtiene todos los chunks cargados actualmente.
-     * Útil para el renderizador o la lógica de actualización.
-     * @returns Un array de todos los chunks activos.
-     */
-    public getAllChunks(): Chunk[] {
-        return Array.from(this.chunks.values());
-    }
-
-    // TODO: Implementar lógica para cargar/descargar chunks basados en la posición del jugador.
-    // TODO: Implementar persistencia (guardar/cargar chunks de archivo/IndexedDB).
 }

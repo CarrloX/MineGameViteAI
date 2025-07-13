@@ -1,9 +1,11 @@
 // src/meshing/GreedyMesher.ts
 
 import { Chunk } from '../world/Chunk';
-import { BlockType, getBlockDefinition } from '../world/Block';
-import { CHUNK_SIZE } from '../utils/constants';
-import type { IMesher } from './IMesher'; // Importa la interfaz IMesher
+// Importa BlockType (el objeto de valores), getBlockDefinition (la función),
+// y los tipos BlockDefinition y BlockTypeValue.
+import { BlockType, getBlockDefinition, type BlockDefinition, type BlockTypeValue } from '../world/Block';
+import { CHUNK_SIZE, ATLAS_WIDTH_TILES, ATLAS_HEIGHT_TILES } from '../utils/constants';
+import type { IMesher } from './IMesher';
 
 // =========================================================================
 // CONSTANTES GLOBALES O DE MÓDULO PARA EL MESHER
@@ -145,7 +147,7 @@ export class GreedyMesher implements IMesher {
     private getChunkBlockIndex(x: number, y: number, z: number): number {
         if (x < 0 || x >= CHUNK_SIZE ||
             y < 0 || y >= CHUNK_SIZE ||
-            z < 0 || z >= CHUNK_SIZE) { // <-- ¡Corregido! Era CHK_SIZE
+            z < 0 || z >= CHUNK_SIZE) {
             return -1;
         }
         // El orden de las coordenadas en tu getIndex de Chunk.ts es y * S^2 + z * S + x
@@ -160,13 +162,13 @@ export class GreedyMesher implements IMesher {
      * @param wx Coordenada X global.
      * @param wy Coordenada Y global.
      * @param wz Coordenada Z global.
-     * @returns El BlockType del bloque en esa posición.
+     * @returns El BlockTypeValue del bloque en esa posición.
      */
     private getBlockFromWorld(
         currentChunk: Chunk,
         neighborChunks: Map<string, Chunk>,
         wx: number, wy: number, wz: number
-    ): BlockType {
+    ): BlockTypeValue { // Tipo de retorno: BlockTypeValue
         // Calcular las coordenadas locales del bloque dentro del CHUNK_SIZE x CHUNK_SIZE x CHUNK_SIZE
         // Esto es necesario para la llamada a `currentChunk.getBlock(localX, localY, localZ)`
         const localX_current = wx - (currentChunk.position.x * CHUNK_SIZE);
@@ -182,7 +184,7 @@ export class GreedyMesher implements IMesher {
             // Si las coordenadas están fuera del chunk actual, calcular el chunk vecino.
             // Necesitamos las coordenadas del CHUNK al que pertenece (wx, wy, wz).
             const targetChunkX = Math.floor(wx / CHUNK_SIZE);
-            const targetChunkY = Math.floor(wy / CHUNK_SIZE); // <-- ¡Corregido! Era CHS_SIZE
+            const targetChunkY = Math.floor(wy / CHUNK_SIZE);
             const targetChunkZ = Math.floor(wz / CHUNK_SIZE);
 
             // Calcular las coordenadas LOCALES dentro del CHUNK_SIZE x CHUNK_SIZE x CHUNK_SIZE
@@ -195,12 +197,18 @@ export class GreedyMesher implements IMesher {
             // Construir la clave para buscar en el mapa de chunks vecinos
             const neighborKey = `${targetChunkX},${targetChunkY},${targetChunkZ}`;
 
+            // Si el bloque está en el chunk actual (que se pasó como argumento)
+            if (targetChunkX === currentChunk.position.x && targetChunkY === currentChunk.position.y && targetChunkZ === currentChunk.position.z) {
+                return currentChunk.getBlock(localX_target, localY_target, localZ_target);
+            }
+
             const neighbor = neighborChunks.get(neighborKey);
             if (neighbor) {
                 return neighbor.getBlock(localX_target, localY_target, localZ_target);
             } else {
                 // Si no se encuentra el chunk vecino (ej. no está cargado o es el "vacío" del mundo)
-                return BlockType.AIR; // Asume que es aire o un bloque "transparente" por defecto
+                // Se realiza un casteo explícito para asegurar que el tipo sea BlockTypeValue
+                return BlockType.AIR as BlockTypeValue;
             }
         }
     }
@@ -221,7 +229,7 @@ export class GreedyMesher implements IMesher {
         let uvs: number[] = [];
         let indices: number[] = [];
         let numVertices = 0; // Contador de vértices agregados
-        let numQuadsGenerated = 0; // Contador de quads generados
+        let numQuadsGenerated = 0; // Contador de quads generados para depuración
 
         // Vector auxiliar para las coordenadas del bloque actual (x, y, z) en el espacio del mundo.
         // Se reutiliza en los bucles para eficiencia.
@@ -241,16 +249,13 @@ export class GreedyMesher implements IMesher {
             const q = [0, 0, 0];
             q[dim] = 1;
 
-            // Reinicia el array `processed` para esta dimensión.
-            // Esto es crucial porque los quads solo se fusionan en un único pase por dimensión.
-            // Las caras que ya fueron parte de un quad en una dimensión (ej. X) no deben ser
-            // procesadas de nuevo en la misma dirección, pero sí en otras direcciones (ej. Y o Z).
-
             // Itera a través de las "rebanadas" del chunk a lo largo de la dimensión actual.
             // Se itera desde -1 hasta CHUNK_SIZE para incluir los bordes del chunk
             // y permitir la comparación con bloques "fuera" del chunk (aire o chunks vecinos).
             for (x[dim] = -1; x[dim] < CHUNK_SIZE + 1; ++x[dim]) {
 
+                // Reinicia el array `processed` para esta REBANADA (slice).
+                // Esto es crucial. Los bloques procesados en una rebanada no deben influir en la siguiente.
                 this.processed.fill(0);
 
                 // Creamos una "máscara" 2D para la rebanada actual.
@@ -270,24 +275,17 @@ export class GreedyMesher implements IMesher {
                         const worldY = x[1] + chunk.position.y * CHUNK_SIZE;
                         const worldZ = x[2] + chunk.position.z * CHUNK_SIZE;
 
-                        // Obtener el índice del bloque actual en el array `processed`.
-                        // Solo se marcan como procesados los bloques *dentro* del chunk.
-
-                        // Si el bloque ya fue procesado en esta dirección (en el mismo pase del eje actual), saltarlo.
-                        // Esto evita que las caras ya fusionadas se procesen de nuevo.
-                        // Solo aplica si la coordenada x[dim] está dentro del chunk actual y el índice es válido.
-
                         // Obtener el tipo de bloque actual (A) y su definición.
                         const blockA = this.getBlockFromWorld(
                             chunk, neighborChunks,
-                            worldX, worldY, worldZ // Usamos coordenadas de MUNDO aquí
+                            worldX, worldY, worldZ
                         );
                         const defA = getBlockDefinition(blockA);
 
                         // Obtener el tipo de bloque adyacente (B) en la dirección del eje 'dim'.
                         const blockB = this.getBlockFromWorld(
                             chunk, neighborChunks,
-                            worldX + q[0], worldY + q[1], worldZ + q[2] // Usamos coordenadas de MUNDO aquí
+                            worldX + q[0], worldY + q[1], worldZ + q[2]
                         );
                         const defB = getBlockDefinition(blockB);
 
@@ -302,96 +300,104 @@ export class GreedyMesher implements IMesher {
                         }
 
                         // --- MASK_BUILD_DEBUG LOGS ---
-                        if (mask[x[v] * CHUNK_SIZE + x[u]] !== 0) {
-                            console.log(`MASK_BUILD_DEBUG: dim=${dim} (axis ${['X','Y','Z'][dim]}), slice_pos_local=${x[dim]}`);
-                            console.log(`  coords(world): [${worldX},${worldY},${worldZ}] (blockA: ID ${blockA})`);
-                            console.log(`  coords(world+q): [${worldX+q[0]},${worldY+q[1]},${worldZ+q[2]}] (blockB: ID ${blockB})`);
-                            console.log(`  defA.isOpaque=${defA.isOpaque}, defB.isOpaque=${defB.isOpaque}`);
-                            console.log(`  maskValue=${mask[x[v] * CHUNK_SIZE + x[u]]}`);
-                        }
+                        // if (mask[x[v] * CHUNK_SIZE + x[u]] !== 0) {
+                        //     console.log(`MASK_BUILD_DEBUG: dim=${dim} (axis ${['X','Y','Z'][dim]}), slice_pos_local=${x[dim]}`);
+                        //     console.log(`  coords(world): [${worldX},${worldY},${worldZ}] (blockA: ID ${blockA})`);
+                        //     console.log(`  coords(world+q): [${worldX+q[0]},${worldY+q[1]},${worldZ+q[2]}] (blockB: ID ${blockB})`);
+                        //     console.log(`  defA.isOpaque=${defA.isOpaque}, defB.isOpaque=${defB.isOpaque}`);
+                        //     console.log(`  maskValue=${mask[x[v] * CHUNK_SIZE + x[u]]}`);
+                        // }
                         // --- FIN MASK_BUILD_DEBUG LOGS ---
                     }
                 }
 
                 // Ahora, recorremos la máscara 2D para encontrar rectángulos de caras fusionables.
                 for (x[v] = 0; x[v] < CHUNK_SIZE; ++x[v]) {
-                    let width = 1; // Ancho del rectángulo encontrado
                     for (x[u] = 0; x[u] < CHUNK_SIZE; ) {
+                        let width = 1; // Ancho del rectángulo fusionado
                         const maskValue = mask[x[v] * CHUNK_SIZE + x[u]];
 
                         if (maskValue !== 0) {
                             width = 1;
                             let height = 1;
 
+                            // Encuentra el ancho del rectángulo (fusión a lo largo del eje U)
                             for (; x[u] + width < CHUNK_SIZE &&
                                    mask[x[v] * CHUNK_SIZE + x[u] + width] === maskValue;
                                    ++width) {}
 
+                            // Encuentra la altura del rectángulo (fusión a lo largo del eje V)
                             for (; x[v] + height < CHUNK_SIZE; ++height) {
                                 let k = 0;
                                 for (; k < width; ++k) {
+                                    // Verifica que toda la fila tenga el mismo maskValue
                                     if (mask[ (x[v] + height) * CHUNK_SIZE + x[u] + k ] !== maskValue) {
                                         break;
                                     }
                                 }
-                                if (k < width) break;
+                                if (k < width) break; // Si la fila no es uniforme, rompe el bucle de altura
                             }
 
+                            // Obtenemos el ID del bloque y lo casteamos a BlockTypeValue
+                            const blockId = Math.abs(maskValue) as BlockTypeValue;
                             const faceIndex = (maskValue > 0) ? dim * 2 + 1 : dim * 2;
                             const side = faces[faceIndex];
 
                             const vertexOffset = numVertices;
 
-                            // Los logs de depuración del mesher
                             console.log(`MESHER_DEBUG: Found quad at local_chunk_coords=[${x[0]},${x[1]},${x[2]}] (dim=${dim}, u=${u}, v=${v}) with maskValue=${maskValue}, width=${width}, height=${height}`);
-
-                            numQuadsGenerated++; // <-- INCREMENTA EL CONTADOR DE QUADS AQUÍ
+                            numQuadsGenerated++;
 
                             // Añadir vértices y normales para el quad fusionado
                             for (let i = 0; i < 4; ++i) {
-                                // Obtener las posiciones relativas del vértice de la definición de la cara.
-                                // Ya no necesitamos almacenar en variables intermedias si no se usan directamente.
-                                // const vertexRelativeX = side.positions[i * 3 + 0]; // ELIMINAR
-                                // const vertexRelativeY = side.positions[i * 3 + 1]; // ELIMINAR
-                                // const vertexRelativeZ = side.positions[i * 3 + 2]; // ELIMINAR
-
-                                // P son las coordenadas en el espacio LOCAL del CHUNK para el vértice
                                 const P = [0, 0, 0];
-
-                                // 1. La coordenada en el eje 'dim' (profundidad de la cara)
-                                P[dim] = x[dim] + (maskValue > 0 ? 1 : 0);
-
-                                // 2. Las coordenadas en los ejes 'u' y 'v' (dimensiones de la cara, paralelas al plano)
-                                // Accedemos directamente a `side.positions` usando los índices `u` y `v`.
-                                P[u] = x[u] + side.positions[i * 3 + u] * width;
+                                P[dim] = x[dim] + (maskValue > 0 ? 1 : 0); // Posición del plano de la cara
+                                P[u] = x[u] + side.positions[i * 3 + u] * width; // Las coordenadas u/v del vértice se escalan por el tamaño del quad
                                 P[v] = x[v] + side.positions[i * 3 + v] * height;
 
                                 // --- NUEVO LOG DE DEPURACIÓN DE VÉRTICES ---
-                                console.log(`VERTEX_POS_DEBUG: dim=${dim}, i=${i}, P_local=[${P[0]},${P[1]},${P[2]}], width=${width}, height=${height}`);
+                                // console.log(`VERTEX_POS_DEBUG: dim=${dim}, i=${i}, P_local=[${P[0]},${P[1]},${P[2]}], width=${width}, height=${height}`);
                                 // --- FIN NUEVO LOG ---
 
                                 positions.push(
-                                    P[0] + chunk.position.x * CHUNK_SIZE,
-                                    P[1] + chunk.position.y * CHUNK_SIZE,
+                                    P[0] + chunk.position.x * CHUNK_SIZE, // Sumamos la posición del chunk
+                                    P[1] + chunk.position.y * CHUNK_SIZE, // para obtener las coordenadas de mundo
                                     P[2] + chunk.position.z * CHUNK_SIZE
                                 );
                                 normals.push(...side.normal);
                             }
 
-                            // Añadir UVs (simplificado para depuración)
-                            // Para un quad fusionado, los UVs deberían ser 0 o 1 en las esquinas,
-                            // independientemente del tamaño del quad, si usamos una textura que se repite.
-                            // Si es una textura que se estira, necesitaríamos (0,0), (width,0), (0,height), (width,height)
-                            // Pero para ver la forma, usemos UVs 0-1 para cada vértice del quad.
-                            // Esto hará que la textura se estire sobre todo el quad.
+                            // Obtener la definición del bloque para sus texturas
+                            const blockDef = getBlockDefinition(blockId);
+
+                            let uvTileCoords: [number, number]; // Coordenadas [columna, fila] en el atlas
+
+                            // Determinar qué textura usar según la cara
+                            if (dim === 1) { // Eje Y (arriba/abajo)
+                                uvTileCoords = (faceIndex === 3) ? blockDef.textures.top : blockDef.textures.bottom; // 3 es +Y (top), 2 es -Y (bottom)
+                            } else { // Ejes X o Z (lados)
+                                uvTileCoords = blockDef.textures.side;
+                            }
+
+                            // Calcular el offset inicial en el espacio UV del atlas (0-1)
+                            const atlasUOffset = uvTileCoords[0] / ATLAS_WIDTH_TILES;
+                            const atlasVOffset = uvTileCoords[1] / ATLAS_HEIGHT_TILES;
+
+                            // Calcular el tamaño de una baldosa en el espacio UV del atlas (0-1)
+                            const tileUvWidth = 1 / ATLAS_WIDTH_TILES;
+                            const tileUvHeight = 1 / ATLAS_HEIGHT_TILES;
+
+                            // Añadir UVs para los 4 vértices del quad fusionado
+                            // Las UVs base (side.uv) son 0-1 para una baldosa.
+                            // Las escalamos por el tamaño del quad (width/height) y por el tamaño de la baldosa en el atlas,
+                            // y luego aplicamos el offset del atlas.
                             uvs.push(
-                                faces[faceIndex].uv[0], faces[faceIndex].uv[1], // Vértice 0
-                                faces[faceIndex].uv[2], faces[faceIndex].uv[3], // Vértice 1
-                                faces[faceIndex].uv[4], faces[faceIndex].uv[5], // Vértice 2
-                                faces[faceIndex].uv[6], faces[faceIndex].uv[7]  // Vértice 3
+                                atlasUOffset + side.uv[0] * width * tileUvWidth,     atlasVOffset + side.uv[1] * height * tileUvHeight, // Vértice 0
+                                atlasUOffset + side.uv[2] * width * tileUvWidth,     atlasVOffset + side.uv[3] * height * tileUvHeight, // Vértice 1
+                                atlasUOffset + side.uv[4] * width * tileUvWidth,     atlasVOffset + side.uv[5] * height * tileUvHeight, // Vértice 2
+                                atlasUOffset + side.uv[6] * width * tileUvWidth,     atlasVOffset + side.uv[7] * height * tileUvHeight  // Vértice 3
                             );
 
-                            // Añadir índices
                             indices.push(
                                 vertexOffset + side.indices[0],
                                 vertexOffset + side.indices[1],
@@ -403,15 +409,24 @@ export class GreedyMesher implements IMesher {
                             numVertices += 4;
 
                             // Marcar los bloques cubiertos por este rectángulo como "procesados"
+                            // Esto es para que no se procesen de nuevo en el mismo pase (misma `dim` y `x[dim]`)
                             for (let h = 0; h < height; ++h) {
                                 for (let w = 0; w < width; ++w) {
+                                    // Establece la máscara a 0 para esta área para que no se reprocese en este slice
                                     mask[ (x[v] + h) * CHUNK_SIZE + x[u] + w ] = 0;
 
-                                    const currentBlockCoords: [number, number, number] = [...x];
+                                    // Si el bloque está dentro de los límites del chunk actual, marcarlo como procesado.
+                                    // x[dim] es la posición de la "rebanada", así que currentBlockCoords[dim] = x[dim].
+                                    // Las coordenadas x[u] y x[v] son las que varían para el quad.
+                                    const currentBlockCoords: [number, number, number] = [0,0,0];
+                                    currentBlockCoords[dim] = x[dim]; // Asegúrate de que la coordenada de la profundidad es la de la rebanada
                                     currentBlockCoords[u] = x[u] + w;
                                     currentBlockCoords[v] = x[v] + h;
 
-                                    if (currentBlockCoords[dim] >= 0 && currentBlockCoords[dim] < CHUNK_SIZE) {
+                                    if (currentBlockCoords[0] >= 0 && currentBlockCoords[0] < CHUNK_SIZE &&
+                                        currentBlockCoords[1] >= 0 && currentBlockCoords[1] < CHUNK_SIZE &&
+                                        currentBlockCoords[2] >= 0 && currentBlockCoords[2] < CHUNK_SIZE) {
+
                                         const processedIndex = this.getChunkBlockIndex(
                                             currentBlockCoords[0],
                                             currentBlockCoords[1],
@@ -424,12 +439,12 @@ export class GreedyMesher implements IMesher {
                                 }
                             }
                         }
-                        x[u] += Math.max(1, width);
+                        x[u] += Math.max(1, width); // Avanza en el eje U por el ancho del quad fusionado
                     }
                 }
             }
         }
-        console.log(`MESHER_SUMMARY: Total quads generated: ${numQuadsGenerated}`); // <-- LOG FINAL
+        console.log(`MESHER_SUMMARY: Total quads generated: ${numQuadsGenerated}`);
         return { positions, normals, uvs, indices };
     }
 }

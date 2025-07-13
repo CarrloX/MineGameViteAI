@@ -8,17 +8,21 @@ import type { IMesher } from '../meshing/IMesher';
 import { GreedyMesher } from '../meshing/GreedyMesher';
 import { CHUNK_SIZE } from '../utils/constants';
 import { Chunk } from '../world/Chunk';
-import { CameraController } from '../player/CameraController'; // <-- ¡NUEVA IMPORTACIÓN!
+import { CameraController } from '../player/CameraController';
+
+// --- ¡NUEVA IMPORTACIÓN DEL ATLAS DE TEXTURAS! ---
+import blockAtlasTextureUrl from '../assets/textures/block_atlas.png'; // Vite procesará esto
+// -------------------------------------------------
 
 export class App {
     private renderer: IRenderer;
     private gameLoop: GameLoop;
     private world: World;
     private scene!: THREE.Scene;
-    private camera!: THREE.Camera; // THREE.Camera es el tipo base, pero ThreeRenderer devuelve PerspectiveCamera
+    private camera!: THREE.Camera;
     private mesher: IMesher;
     private loadedChunkMeshes!: Map<string, THREE.Mesh>;
-    private cameraController!: CameraController; // <-- ¡NUEVA PROPIEDAD!
+    private cameraController!: CameraController;
 
     constructor() {
         this.renderer = new ThreeRenderer();
@@ -32,32 +36,19 @@ export class App {
     public async initialize(container: HTMLElement | HTMLCanvasElement): Promise<void> {
         this.renderer.initialize(container);
         this.scene = this.renderer.getScene();
-        this.camera = this.renderer.getCamera(); // Esta cámara es THREE.PerspectiveCamera
+        this.camera = this.renderer.getCamera();
 
-        // Asegurarse de que la cámara sea una PerspectiveCamera para el CameraController
         if (!(this.camera instanceof THREE.PerspectiveCamera)) {
             console.error("La cámara no es una THREE.PerspectiveCamera. Los controles de cámara pueden no funcionar.");
             return;
         }
 
-        // --- INICIALIZAR EL CAMERA CONTROLLER ---
-        // Pasa la cámara y el elemento DOM donde se adjuntarán los listeners.
-        // Si 'container' es un canvas, úsalo. Si es un div, usa el document.body o el div mismo.
-        // Para el bloqueo del puntero, es mejor usar el canvas directamente si es el elemento interactivo.
         this.cameraController = new CameraController(this.camera as THREE.PerspectiveCamera, container);
-        // La posición inicial de la cámara se establece en CameraController para que sea el punto de partida.
-        // Eliminamos el ajuste temporal de cámara aquí, ya que CameraController lo maneja.
-        // this.camera.position.set(CHUNK_SIZE * 1.5, CHUNK_SIZE * 1.5, CHUNK_SIZE * 1.5);
-        // this.camera.lookAt(new THREE.Vector3(CHUNK_SIZE / 2, CHUNK_SIZE / 2, CHUNK_SIZE / 2));
-        // --- FIN DE INICIALIZACIÓN DEL CAMERA CONTROLLER ---
 
-
-        // Opcional pero recomendado: configurar el fondo de la escena
         if (this.scene instanceof THREE.Scene) {
             this.scene.background = new THREE.Color(0x87ceeb);
         }
 
-        // *** AÑADIR UN CHUNK DE PRUEBA Y RENDERIZARLO ***
         const chunkX = 0;
         const chunkY = 0;
         const chunkZ = 0;
@@ -73,11 +64,40 @@ export class App {
 
         const chunkGeometryData = this.mesher.generateMesh(testChunk, neighborChunksMap);
 
+        // --- INICIO DE CÓDIGO PARA CARGAR EL ATLAS DE TEXTURAS ---
+        const textureLoader = new THREE.TextureLoader();
+        let atlasTexture: THREE.Texture;
+
+        try {
+            // Carga el atlas de texturas
+            atlasTexture = await textureLoader.loadAsync(blockAtlasTextureUrl);
+            atlasTexture.wrapS = THREE.RepeatWrapping; // Asegura que la textura se repita en U
+            atlasTexture.wrapT = THREE.RepeatWrapping; // Asegura que la textura se repita en V
+            // No necesitamos texture.repeat.set(width, height) aquí, ya que el mesher calcula las UVs.
+
+            console.log("Atlas de texturas 'block_atlas.png' cargado con éxito.");
+        } catch (error) {
+            console.error("Error al cargar el atlas de texturas 'block_atlas.png':", error);
+            // Fallback a una textura de error magenta
+            const canvas = document.createElement('canvas');
+            canvas.width = 1;
+            canvas.height = 1;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.fillStyle = '#FF00FF';
+                ctx.fillRect(0, 0, 1, 1);
+            }
+            atlasTexture = new THREE.CanvasTexture(canvas);
+        }
+
+        // Crear un material usando el atlas de texturas
         const material = new THREE.MeshBasicMaterial({
-            color: 0x00ff00,
+            map: atlasTexture, // <-- ¡Asigna el atlas aquí!
             vertexColors: false,
             side: THREE.DoubleSide
         });
+        // --- FIN DE CÓDIGO PARA CARGAR EL ATLAS DE TEXTURAS ---
+
 
         const chunkGeometry = new THREE.BufferGeometry();
         chunkGeometry.setAttribute('position', new THREE.Float32BufferAttribute(chunkGeometryData.positions, 3));
@@ -97,7 +117,7 @@ export class App {
 
         chunkMesh.position.set(
             chunkX * CHUNK_SIZE,
-            chunkY * CHUNK_SIZE,
+            chunkY * CHUNK_SIZE, // <-- ¡Corregido! Asegúrate de que sea CHUNK_SIZE
             chunkZ * CHUNK_SIZE
         );
 
@@ -109,13 +129,9 @@ export class App {
     }
 
     private update(deltaTime: number): void {
-        // Lógica de actualización del mundo y jugador aquí
-        // --- ACTUALIZAR EL CAMERA CONTROLLER ---
         if (this.cameraController) {
-            // console.log("App.update - deltaTime:", deltaTime); // <-- Añadido para depuración
             this.cameraController.update(deltaTime);
         }
-        // --- FIN ACTUALIZACIÓN CAMERA CONTROLLER ---
     }
 
     private render(): void {
@@ -125,7 +141,6 @@ export class App {
     public dispose(): void {
         this.gameLoop.stop();
         this.renderer.dispose();
-        // TODO: Dispose de los chunks si es necesario
         console.log("App disposed.");
     }
 }
